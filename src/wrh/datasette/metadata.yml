@@ -1,0 +1,34 @@
+title: wrh
+description: Personal data warehouse. Search the timeline, or browse each source's own tables.
+databases:
+  wrh:
+    tables:
+      timeline:
+        description: Every event from every source. Use the search box for full-text search.
+        sort_desc: ts
+        facets: [source]
+      browser_visits:
+        description: One row per page visit, from browser history snapshots.
+        sort_desc: ts
+        facets: [browser, device, domain]
+      raw_files:
+        description: Unchanged copies of every imported file, in raw/ under the data directory.
+        sort_desc: archived_at
+    queries:
+      search_timeline:
+        title: Search everything
+        sql: |-
+          select t.ts, t.source, t.title, t.url, t.body
+          from timeline_fts f join timeline t on t.id = f.rowid
+          where timeline_fts match :q
+          order by f.rank
+          limit 200
+      first_seen:
+        title: When did I first come across this?
+        description: Earliest timeline entries matching a search, oldest first.
+        sql: |-
+          select t.ts, t.source, t.title, t.url, t.body
+          from timeline_fts f join timeline t on t.id = f.rowid
+          where timeline_fts match :q
+          order by t.ts asc
+          limit 50

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- On the M1 server. A LaunchAgent (not a LaunchDaemon) so it runs in your
+     logged-in session and can read the key from your login Keychain. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.wrh.ingest</string>
+    <key>WorkingDirectory</key><string>/Users/cjb/repos/wrh</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/sh</string><string>-lc</string><string>uv run wrh ingest</string>
+    </array>
+    <key>StartInterval</key><integer>900</integer>
+    <key>StandardErrorPath</key><string>/tmp/wrh-ingest.log</string>
+</dict>
+</plist>

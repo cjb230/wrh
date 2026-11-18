@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+# Never commit data or keys. The data directory lives outside the repo by default (~/wrh-data).
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+wrh-data/
+.env
