@@ -1,12 +1,185 @@
-.venv/
-__pycache__/
-*.pyc
-.pytest_cache/
-dist/
-# Never commit data or keys. The data directory lives outside the repo by default (~/wrh-data).
+# .gitignore for wrh, a personal data warehouse.
+#
+# The most important rule: personal data, databases and keys never go in git.
+# The real data directory lives outside the repo ($WRH_HOME, default ~/wrh-data;
+# see src/wrh/config.py), but these rules catch copies that end up in here by
+# accident. If a test ever needs a fixture that matches one of these patterns,
+# put it under tests/fixtures/ and un-ignore it explicitly (see the end of file).
+
+# ---------------------------------------------------------------------------
+# Personal data
+# ---------------------------------------------------------------------------
+
+# The data directory, and its parts, if WRH_HOME ever points inside the repo
+wrh-data/
+/data/
+/raw/
+/inbox/
+/outbox/
+.wrh-outbox/
+
+# Databases (wrh.db, browser history snapshots, any SQLite or SQLCipher file)
 *.db
 *.db-wal
 *.db-shm
+*.db-journal
 *.sqlite
-wrh-data/
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite-journal
+*.sqlite3-wal
+*.sqlite3-shm
+*-wal
+*-shm
+*-journal
+
+# Encrypted raw archive files (raw/<source>/<yyyy>/<mm>/<hash>__<name>.enc)
+*.enc
+
+# Browser history files copied straight from a profile
+History
+History-journal
+places.sqlite*
+History.db*
+
+# Data exports (Claude, ChatGPT, Google Takeout, Apple Health, etc.)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+exports/
+export/
+takeout*/
+Takeout*/
+conversations.json
+users.json
+projects.json
+memories.json
+message_feedback.json
+shared_conversations.json
+chat.html
+export.xml
+export_cda.xml
+*.mbox
+*.eml
+*.pst
+*.vcf
+*.ics
+
+# Spreadsheets and dumps that are likely to hold personal data
+*.csv
+*.tsv
+*.parquet
+*.jsonl
+*.ndjson
+*.sql
+*.dump
+
+# ---------------------------------------------------------------------------
+# Keys and secrets
+# ---------------------------------------------------------------------------
 .env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.pfx
+*.keychain
+*.keychain-db
+secrets/
+secret*.json
+credentials*.json
+token*.json
+client_secret*.json
+.netrc
+id_rsa*
+id_ed25519*
+
+# ---------------------------------------------------------------------------
+# Logs and scratch output
+# ---------------------------------------------------------------------------
+*.log
+logs/
+tmp/
+scratch/
+*.bak
+*.tmp
+*.swp
+*.swo
+*~
+
+# ---------------------------------------------------------------------------
+# Python, uv, pytest
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+.python-version.local
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+pip-wheel-metadata/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+.hypothesis/
+.ipynb_checkpoints/
+.cache/
+
+# ---------------------------------------------------------------------------
+# macOS
+# ---------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+.TemporaryItems
+.DocumentRevisions-V100
+Icon?
+
+# ---------------------------------------------------------------------------
+# Windows
+# ---------------------------------------------------------------------------
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# ---------------------------------------------------------------------------
+# Editors and tools
+# ---------------------------------------------------------------------------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.iml
+*.sublime-workspace
+.claude/settings.local.json
+
+# ---------------------------------------------------------------------------
+# Deliberate exceptions: small, synthetic test fixtures only.
+# Never put real personal data here.
+# ---------------------------------------------------------------------------
+!tests/fixtures/
+!tests/fixtures/**
