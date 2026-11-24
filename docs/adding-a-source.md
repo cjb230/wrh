@@ -60,6 +60,11 @@ Rules:
 * **Keep a way back to the original** in `url`: a web URL, `message://` link,
   file path, or anything else that lets you find the real thing.
 * Don't modify the raw file; it is the archived copy.
+* **More than one table?** `wrh reimport` empties `timeline_table` by
+  default; override `reset(conn)` to empty the others too (see
+  `sources/llm/importer.py`).
+* **Exports that contain everything** (each one a full snapshot): upsert
+  so a newer file updates rows, and don't let an older file overwrite them.
 
 ## 3. Register it
 

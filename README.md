@@ -10,7 +10,7 @@ What it is for:
 2. **Provenance.** When and where you first came across an idea or a person.
 3. **Self-research.** Keeping the data so you can analyse it later.
 
-Status: scaffold plus one source (browser history).
+Status: scaffold plus two sources (browser history, Claude and ChatGPT chats).
 
 ## How it fits together
 
@@ -91,6 +91,35 @@ You can also import a single file by hand:
 ```sh
 uv run wrh import browser ~/Downloads/History --meta browser=chrome --meta device=old-laptop
 ```
+
+## Claude and ChatGPT chats
+
+Both services give you a zip of your whole chat history by email:
+
+* **Claude:** claude.ai > Settings > Privacy > Export data. The download
+  link arrives by email.
+* **ChatGPT:** chatgpt.com > Settings > Data controls > Export data >
+  Confirm export. The download link arrives by email and expires after 24 hours.
+
+Then, on the server:
+
+```sh
+uv run wrh import llm ~/Downloads/data-2026-11-18-*.zip   # Claude
+uv run wrh import llm ~/Downloads/<chatgpt-export>.zip    # ChatGPT
+uv run wrh search 'sourdough' --source llm
+```
+
+The zip is archived encrypted in `raw/llm/` and the format is detected
+automatically. You get `llm_conversations` and `llm_messages` (time, role,
+model where ChatGPT records it, attachment text for Claude, and every
+ChatGPT edit/regeneration branch, with `on_current_branch` marking the one
+you kept). Your messages and the assistant's replies go on the timeline,
+linking back to the conversation on claude.ai or chatgpt.com.
+
+Request a fresh export whenever you like and import it the same way: each
+export contains everything, so conversations are updated in place and only
+new messages are added. Conversations you delete on the service stay here.
+Delete the zip from Downloads after importing; the encrypted copy is the one to keep.
 
 ## Commands
 

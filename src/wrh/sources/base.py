@@ -18,6 +18,11 @@ class Source:
     def init(self, conn) -> None:
         conn.executescript(self.schema)
 
+    def reset(self, conn) -> None:
+        """Empty this source's tables before `wrh reimport`. Override if the
+        source has more tables than ``timeline_table``."""
+        conn.execute(f"DELETE FROM {self.timeline_table}")
+
     def import_file(self, conn, path: Path, meta: Mapping, raw_file_id: int) -> int:
         """Parse one raw file and write rows to this source's own tables.
 

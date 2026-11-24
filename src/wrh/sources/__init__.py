@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from .base import Source
 from .browser import BrowserHistory
+from .llm import LLMChats
 
-SOURCES: dict[str, Source] = {s.name: s for s in [BrowserHistory()]}
+SOURCES: dict[str, Source] = {s.name: s for s in [BrowserHistory(), LLMChats()]}
 
 
 def get_source(name: str) -> Source:

@@ -11,6 +11,14 @@ databases:
         description: One row per page visit, from browser history snapshots.
         sort_desc: ts
         facets: [browser, device, domain]
+      llm_conversations:
+        description: One row per Claude or ChatGPT conversation, from the official data exports.
+        sort_desc: updated_at
+        facets: [provider, model]
+      llm_messages:
+        description: Every message in those conversations. on_current_branch = 0 marks ChatGPT edits and regenerations you moved away from.
+        sort_desc: ts
+        facets: [provider, role, model]
       raw_files:
         description: Unchanged copies of every imported file, in raw/ under the data directory.
         sort_desc: archived_at

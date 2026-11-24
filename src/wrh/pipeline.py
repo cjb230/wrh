@@ -67,7 +67,7 @@ def reimport(conn, paths: Paths, source_name: str) -> dict:
     ).fetchall()
     with conn:
         db.delete_timeline(conn, source.name)
-        conn.execute(f"DELETE FROM {source.timeline_table}")
+        source.reset(conn)
         total = 0
         for r in rows:
             with raw.plaintext(paths, r["path"]) as plain:
