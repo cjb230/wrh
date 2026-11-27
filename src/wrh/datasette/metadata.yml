@@ -19,10 +19,70 @@ databases:
         description: Every message in those conversations. on_current_branch = 0 marks ChatGPT edits and regenerations you moved away from.
         sort_desc: ts
         facets: [provider, role, model]
+      email_messages:
+        description: One row per email, from IMAP sync or an mbox file. category says how it was filed (category_reason says why); labels and gm_thrid are Gmail's own.
+        sort_desc: ts
+        facets: [account, category, from_address, is_sent]
+      email_correspondents:
+        description: Everyone you have sent mail to, from your Sent folder. Their mail is always filed as personal.
+        sort_desc: times
+      email_attachment_files:
+        description: Email attachments, each stored once, encrypted, under raw/email-attachments/. Decrypt with `wrh attachment <sha256>`.
+        sort_desc: stored_at
+        facets: [type]
+      email_participants:
+        description: Who was on each email (from, to, cc, bcc, reply_to). Join on address to find everything with one person.
+        facets: [role]
+      calendar_events:
+        description: One row per calendar event as written in its feed, including repeat rules. missing_since marks events gone from the latest feed.
+        sort_desc: start
+        facets: [calendar, status]
+      calendar_occurrences:
+        description: One row per occurrence; a repeating event has one row per date, up to a year ahead.
+        sort_desc: start
+        facets: [calendar]
+      messages_messages:
+        description: iMessage and SMS from the server's Messages database. kind = message, reaction (tapback) or event.
+        sort_desc: ts
+        facets: [service, kind, is_from_me, handle]
+      messages_chats:
+        description: One row per conversation.
+        facets: [service, is_group]
+      messages_handles:
+        description: Phone numbers and email addresses in Messages, with names from Contacts.
+      photos_photos:
+        description: Metadata for every photo and video in the Photos library (no image files).
+        sort_desc: ts
+        facets: [kind, country, favorite, screenshot]
+      photos_people:
+        description: One row per person recognised in a photo.
+        facets: [person]
+      import_runs:
+        description: One row per import, sync, ingest or check run. status = ok, warning, error, interrupted.
+        sort_desc: id
+        facets: [source, job, status]
+      import_problems:
+        description: Warnings and errors from those runs, with tracebacks in detail.
+        sort_desc: id
+        facets: [source, level]
       raw_files:
         description: Unchanged copies of every imported file, in raw/ under the data directory.
         sort_desc: archived_at
     queries:
+      import_health:
+        title: Import health
+        description: Per source and job, the last run and the last successful run.
+        sql: |-
+          select source, job,
+            max(started_at) as last_run,
+            (select status from import_runs r2 where r2.source = r.source and r2.job = r.job
+             order by id desc limit 1) as last_status,
+            max(case when status in ('ok', 'warning') then finished_at end) as last_ok,
+            sum(case when status = 'error' and started_at > strftime('%Y-%m-%dT%H:%M:%S', 'now', '-1 day')
+                then 1 else 0 end) as errors_24h
+          from import_runs r
+          group by source, job
+          order by last_run desc
       search_timeline:
         title: Search everything
         sql: |-

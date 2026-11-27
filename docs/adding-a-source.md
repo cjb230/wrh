@@ -78,6 +78,20 @@ metadata (written last). Use only the standard library, and never the
 database key. See `sources/browser/collector.py`, then add a `wrh collect
 <name>` command in `cli.py`.
 
+## 4b. Or let the server fetch it (sync)
+
+If the server can fetch the data itself (an API, IMAP, a local database),
+set `can_sync = True` and implement `sync(ctx)`: fetch what is new, put it
+in a file, and call `ctx.save(name, data_bytes, meta)`, which archives and
+imports it. Keep a cursor with `ctx.get_state` / `ctx.set_state`, saved only
+after the data it covers. Report problems with `ctx.run.warn(...)` (carry
+on) or `ctx.run.exception(...)` (a part failed); an exception that escapes
+`sync` marks the whole run as failed. Settings come from the source's
+section of `config.toml` (`ctx.settings`) and secrets from
+`wrh.keys.get_secret("<source>/<name>")`. Add the section to
+`docs/config.example.toml` and a default interval to `settings.py`.
+See `sources/calendar/importer.py` for a small example.
+
 ## 5. Test it
 
 Build a tiny fake input in `tests/`, import it through `pipeline.import_file`,

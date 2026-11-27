@@ -92,12 +92,14 @@ def init(ctx):
 @click.pass_context
 def import_cmd(ctx, source, files, meta_pairs):
     """Archive and import raw FILES for SOURCE (e.g. `wrh import browser History`)."""
-    from .pipeline import import_file
+    from .pipeline import import_files
 
     meta = dict(p.split("=", 1) for p in meta_pairs)
-    conn = _open(ctx)
-    for f in files:
-        click.echo(json.dumps(import_file(conn, _paths(ctx), source, Path(f), meta)))
+    results = import_files(_open(ctx), _paths(ctx), source, files, meta)
+    for r in results:
+        click.echo(json.dumps(r))
+    if any("error" in r for r in results):
+        raise click.ClickException("Some files failed; see above, or the import_problems table.")
 
 
 @cli.command()
@@ -111,6 +113,134 @@ def ingest(ctx):
     for r in results:
         click.echo(json.dumps(r))
     click.echo(f"{len(results)} file(s) processed.")
+
+
+@cli.command()
+@click.argument("source")
+@click.pass_context
+def sync(ctx, source):
+    """Fetch new data for SOURCE now (email, calendar, messages, photos)."""
+    from .pipeline import sync_source
+
+    try:
+        r = sync_source(_open(ctx), _paths(ctx), source)
+    except ValueError as e:
+        raise click.ClickException(str(e))
+    click.echo(f"{source}: {r.status}. {r.files} file(s), {r.rows_read} rows read, "
+               f"{r.timeline_rows} timeline rows. {r.message or ''}")
+    if r.status != "ok":
+        click.echo(f"See: wrh problems --run {r.id}")
+
+
+@cli.command("run")
+@click.option("--due", is_flag=True, help="Run only the jobs whose interval has passed (for launchd).")
+@click.argument("jobs", nargs=-1)
+@click.pass_context
+def run_cmd(ctx, due, jobs):
+    """Run scheduled jobs: all of them, the named JOBS, or (with --due) those due now."""
+    from .scheduler import lock, run_due
+
+    p = _paths(ctx)
+    try:
+        with lock(p):
+            done = run_due(_open(ctx), p, list(jobs) or None, force=not due)
+    except BlockingIOError:
+        click.echo("Another `wrh run` is still going; skipping.")
+        return
+    for job, status in done:
+        click.echo(f"{job}: {status}")
+
+
+@cli.command()
+@click.pass_context
+def status(ctx):
+    """Show each job's last run, last success, and whether it is stale."""
+    from . import settings as settings_mod
+    from .scheduler import status as _status
+
+    rows = _status(_open(ctx), settings_mod.load(_paths(ctx)))
+    click.echo(f"{'job':<10} {'every':>6} {'last run (UTC)':<17} {'status':<12} {'last ok (UTC)':<17} stale")
+    for r in rows:
+        click.echo(f"{r['job']:<10} {str(r['every_min']) + 'm':>6} {r['last_run'] or '-':<17} "
+                   f"{r['last_status']:<12} {r['last_ok'] or '-':<17} {'STALE' if r['stale'] else ''}")
+        if r["error"]:
+            click.echo(f"{'':11}{r['error']}")
+
+
+@cli.command()
+@click.option("--notify", is_flag=True, help="Also send the alert (notification, and email if configured).")
+@click.pass_context
+def check(ctx, notify):
+    """Report failing or stale sources. Exits 1 if there are any."""
+    from . import runlog
+    from . import settings as settings_mod
+    from .scheduler import check as _check, notify as _notify
+
+    conn, p = _open(ctx), _paths(ctx)
+    s = settings_mod.load(p)
+    problems = _check(conn, s)
+    for line in problems:
+        click.echo(line)
+    if problems and notify:
+        with runlog.run(conn, "*", "check") as r:
+            r.message = f"{len(problems)} problem(s)"
+            _notify(conn, p, s, problems, r)
+    if not problems:
+        click.echo("All good.")
+    ctx.exit(1 if problems else 0)
+
+
+@cli.command()
+@click.option("--run", "run_id", type=int, default=None, help="Only this run.")
+@click.option("--limit", default=30)
+@click.pass_context
+def problems(ctx, run_id, limit):
+    """List recent problems from the run log."""
+    rows = _open(ctx).execute(
+        "SELECT p.ts, p.source, p.level, p.item, p.message, p.run_id FROM import_problems p"
+        " WHERE (:run IS NULL OR p.run_id = :run) ORDER BY p.id DESC LIMIT :limit",
+        {"run": run_id, "limit": limit},
+    ).fetchall()
+    for r in rows:
+        click.echo(f"{r['ts'][:19]} {r['source']:<9} {r['level']:<7} run {r['run_id']}: {r['message']}"
+                   + (f" [{r['item']}]" if r["item"] else ""))
+
+
+@cli.command()
+@click.argument("sha256")
+@click.option("--out", "out", type=click.Path(dir_okay=False), default=None,
+              help="Where to write it (default: its original name, in the current folder).")
+@click.pass_context
+def attachment(ctx, sha256, out):
+    """Decrypt a stored email attachment (the sha256 from email_messages.attachments)."""
+    import shutil
+
+    from .sources.email import attachments as att
+
+    conn = _open(ctx)
+    try:
+        with att.plaintext(conn, _paths(ctx), sha256) as (p, name):
+            dest = Path(out or Path(name or sha256).name)
+            if dest.exists():
+                raise click.ClickException(f"{dest} already exists")
+            shutil.copyfile(p, dest)
+    except KeyError as e:
+        raise click.ClickException(str(e))
+    click.echo(f"Wrote {dest}")
+
+
+@cli.group()
+def secret():
+    """Passwords and secret URLs used by sync jobs, kept in the Keychain."""
+
+
+@secret.command("set")
+@click.argument("name")
+def secret_set(name):
+    """Store secret NAME, e.g. `email/gmail` (an app password) or `calendar/personal` (a URL)."""
+    value = click.prompt(f"Value for {name}", hide_input=True)
+    keys.set_secret(name, value)
+    click.echo("Stored in the Keychain.")
 
 
 @cli.command()

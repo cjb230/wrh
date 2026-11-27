@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- On the server (macbook-pro-2). Runs every scheduled job that is due:
+     ingest, each source in ~/wrh-data/config.toml, and the daily check.
+     Replaces com.wrh.ingest.plist. A LaunchAgent (not a LaunchDaemon) so it
+     runs in your logged-in session and can read the Keychain. Install:
+       cp collectors/macos/com.wrh.run.plist ~/Library/LaunchAgents/
+       launchctl unload ~/Library/LaunchAgents/com.wrh.ingest.plist 2>/dev/null
+       launchctl load ~/Library/LaunchAgents/com.wrh.run.plist
+     See docs/running-unattended.md. -->
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.wrh.run</string>
+    <key>WorkingDirectory</key><string>/Users/cjb/repos/wrh</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/sh</string><string>-lc</string><string>uv run wrh run --due</string>
+    </array>
+    <key>StartInterval</key><integer>900</integer>
+    <key>RunAtLoad</key><true/>
+    <key>StandardOutPath</key><string>/tmp/wrh-run.log</string>
+    <key>StandardErrorPath</key><string>/tmp/wrh-run.log</string>
+</dict>
+</plist>

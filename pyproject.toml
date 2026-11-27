@@ -3,13 +3,17 @@ name = "wrh"
 version = "0.1.0"
 description = "A personal data warehouse: an encrypted SQLite timeline of your digital history, browsable with Datasette."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.15"
 dependencies = [
     "click>=8.1",
     "cryptography>=42",
     "datasette>=0.65,<0.66",
     "keyring>=25",
-    "sqlcipher3-wheels>=0.5.4",
+    "sqlcipher3>=0.6.5",
+    "icalendar>=6.1",
+    "recurring-ical-events>=3.3",
+    # Photos metadata. macOS only: it reads the Photos library on the server.
+    "osxphotos>=0.70; sys_platform == 'darwin'",
 ]
 
 [project.scripts]
