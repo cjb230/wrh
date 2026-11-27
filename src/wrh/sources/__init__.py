@@ -4,9 +4,15 @@ from __future__ import annotations
 
 from .base import Source
 from .browser import BrowserHistory
+from .calendar import Calendar
+from .email import Email
 from .llm import LLMChats
+from .messages import Messages
+from .photos import Photos
 
-SOURCES: dict[str, Source] = {s.name: s for s in [BrowserHistory(), LLMChats()]}
+SOURCES: dict[str, Source] = {
+    s.name: s for s in [BrowserHistory(), LLMChats(), Email(), Calendar(), Messages(), Photos()]
+}
 
 
 def get_source(name: str) -> Source:

@@ -17,7 +17,8 @@ it encrypted if it is ever copied to the cloud.
 
 ## How it works with SQLite tools
 
-* `sqlcipher3` (package `sqlcipher3-wheels`) is a drop-in for Python's
+* `sqlcipher3` (the `sqlcipher3` package, which ships SQLCipher built in, including
+  wheels for Python 3.15) is a drop-in for Python's
   `sqlite3`, built with SQLCipher and FTS5. All wrh code that reads `wrh.db`
   opens it through `wrh.db.connect()`, which runs `PRAGMA key` first.
 * **Datasette** works unchanged. Datasette prefers a module called `pysqlite3`

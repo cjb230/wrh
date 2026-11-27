@@ -77,6 +77,33 @@ def has_stored_key() -> bool:
         return False
 
 
+# --- other secrets (IMAP passwords, secret calendar URLs) ----------------------
+# Stored in the same keyring service, under account "secret:<name>", e.g.
+# "secret:email/gmail". ``WRH_SECRET_<NAME>`` (name upper-cased, / and - as _)
+# overrides, for tests.
+
+
+def _secret_env(name: str) -> str:
+    return "WRH_SECRET_" + re.sub(r"[^A-Za-z0-9]", "_", name).upper()
+
+
+def get_secret(name: str) -> str:
+    env = os.environ.get(_secret_env(name))
+    if env:
+        return env
+    try:
+        value = _keyring().get_password(SERVICE, f"secret:{name}")
+    except Exception as e:
+        raise KeyError_(f"Could not read secret {name!r} from the OS keyring ({e}).") from e
+    if not value:
+        raise KeyError_(f"No secret {name!r} stored. Run `wrh secret set {name}`.")
+    return value
+
+
+def set_secret(name: str, value: str) -> None:
+    _keyring().set_password(SERVICE, f"secret:{name}", value.strip())
+
+
 def pragma(key: str) -> str:
     """The PRAGMA statement that unlocks a database with a raw key."""
     return f"PRAGMA key = \"x'{validate(key)}'\""

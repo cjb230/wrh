@@ -9,7 +9,10 @@ src/wrh/
   keys.py           the database key: Keychain or WRH_DB_KEY
   db.py             SQLCipher connection + core tables (raw_files, timeline, timeline_fts)
   raw.py            content-addressed, encrypted raw archive
-  pipeline.py       archive -> import -> timeline; ingest; reimport; search
+  pipeline.py       archive -> import -> timeline; ingest; reimport; sync; search
+  runlog.py         import_runs, import_problems, sync_state: the run log and cursors
+  scheduler.py      wrh run --due, status, check, alerts
+  settings.py       <data>/config.toml
   serve.py          Datasette on the encrypted db
   timeutil.py       the one timestamp format
   datasette/metadata.yml   titles, default sorts, facets, canned queries
@@ -17,6 +20,11 @@ src/wrh/
     __init__.py     the registry
     base.py         the Source contract
     browser/        importer.py (server side) + collector.py (everyday machines)
+    llm/            Claude and ChatGPT exports
+    email/          IMAP sync + mbox import
+    calendar/       iCal feed sync + .ics import
+    messages/       iMessage/SMS from the server's chat.db
+    photos/         Photos library metadata (osxphotos)
 collectors/macos/   scheduling glue (launchd, rsync)
 tests/
 ```
@@ -32,6 +40,20 @@ tests/
    that source's own tables.
 4. The source's `timeline_rows` maps its rows onto the shared core fields,
    which are upserted into `timeline`; triggers keep `timeline_fts` in sync.
+
+Sources that fetch their own data (`can_sync = True`) do steps 1-3 in one go:
+their `sync()` builds a raw file (an IMAP batch, a calendar feed, a Messages
+export) and hands it to `ctx.save()`, which archives and imports it exactly
+like a snapshot from the inbox. So `wrh reimport` works for them too.
+
+## Run log
+
+`runlog.run(conn, source, job)` wraps every import, ingest, sync and check.
+It writes `import_runs` before the work starts (status `running`) and
+updates it afterwards; warnings and errors collected during the run go to
+`import_problems` after the run's own transaction has been committed or
+rolled back, so a failure never erases its own report. `sync_state` holds
+each source's cursor (last IMAP UID per folder, last Messages ROWID, ...).
 
 ## Core fields
 

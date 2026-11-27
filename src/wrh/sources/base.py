@@ -15,6 +15,10 @@ class Source:
     #: table names with the source name so sources never collide.
     schema: str = ""
 
+    #: True if the source can fetch its own data (``wrh sync <name>``, and the
+    #: scheduler). Such sources implement ``sync(ctx)``.
+    can_sync: bool = False
+
     def init(self, conn) -> None:
         conn.executescript(self.schema)
 
@@ -36,5 +40,16 @@ class Source:
 
         Each row has: ts, source_key, title, body, url. ``raw_file_id`` limits
         it to rows that came from one file; None means every row.
+        """
+        raise NotImplementedError
+
+    def sync(self, ctx) -> None:
+        """Fetch new data and hand it to ``ctx.save(...)``, which archives it
+        and runs ``import_file`` on it, exactly like a collector snapshot.
+
+        ``ctx`` is a ``pipeline.SyncContext``: ``ctx.conn``, ``ctx.settings``
+        (this source's section of config.toml), ``ctx.run`` (the run log:
+        ``ctx.run.warn(...)``), ``ctx.get_state(key)`` / ``ctx.set_state(key, value)``
+        for cursors. Save a cursor only after the data it covers is saved.
         """
         raise NotImplementedError

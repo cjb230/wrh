@@ -1,0 +1,77 @@
+# Copy to ~/wrh-data/config.toml on the server and edit.
+# A source runs on the schedule only if its section is here.
+# Passwords and secret URLs are NOT kept in this file: `wrh secret set <name>`
+# puts them in the Keychain.
+#
+# Every section takes:
+#   interval_minutes   how often it runs (defaults below)
+#   stale_after_hours  `wrh check` complains if no successful run for this long
+#                      (default: 4 x the interval, at least 24 hours)
+#   enabled = false    to pause it without deleting the section
+
+[ingest]                     # collector snapshots in inbox/ (always runs)
+interval_minutes = 15
+
+# --- Email over IMAP: Gmail and any other provider ------------------------------
+[email]
+interval_minutes = 30
+max_messages_per_run = 5000  # the first sync of a big mailbox spreads over several runs
+
+# What to keep per category (see src/wrh/sources/email/classify.py):
+#   full = whole message, attachments stored separately; headers = sender,
+#   recipients, subject, date only; none = skip it.
+# Mail from anyone you have ever written to is always "personal".
+[email.keep]
+personal = "full"
+list = "full"         # discussion mailing lists
+automated = "full"    # notifications, receipts, no-reply senders
+bulk = "none"         # newsletters and marketing
+spam = "none"
+
+# Attachments over this size, and inline images under this size (logos), are not stored.
+# max_attachment_mb = 50
+# min_inline_image_kb = 20
+
+[[email.accounts]]
+name = "gmail"               # password: wrh secret set email/gmail  (a Google app password)
+host = "imap.gmail.com"
+user = "you@gmail.com"
+# folders = ["[Gmail]/All Mail"]   # default for Gmail: All Mail, found by its IMAP flag,
+                                    # so a Polish-language Gmail works too
+# sent_folder = "[Gmail]/Sent Mail" # default: found by its IMAP flag
+# other_addresses = ["you@work.com"]  # addresses that count as "you" when sorting sent mail
+
+# [[email.accounts]]
+# name = "fastmail"          # wrh secret set email/fastmail
+# host = "imap.fastmail.com"
+# user = "you@fastmail.com"
+# folders = ["INBOX", "Sent"]  # the default for non-Gmail accounts
+
+# --- Calendars, by their iCal feed ------------------------------------------------
+[calendar]
+interval_minutes = 360
+
+[[calendar.feeds]]
+name = "personal"            # URL: wrh secret set calendar/personal
+                             # Google Calendar > Settings > (the calendar) > Integrate calendar
+                             # > "Secret address in iCal format"
+
+# --- iMessage and SMS from this Mac's Messages app -------------------------------
+[messages]
+interval_minutes = 30
+# chat_db = "~/Library/Messages/chat.db"
+
+# --- Photos metadata from this Mac's Photos library ------------------------------
+[photos]
+interval_minutes = 720
+# library = "~/Pictures/Photos Library.photoslibrary"   # default: the system library
+
+# --- Alerts -----------------------------------------------------------------------
+# `wrh check` runs daily. If a source is failing or stale it shows a notification
+# on the server and, with this section, emails you (at most daily per new problem),
+# sending through one of the email accounts above.
+[alerts]
+email_to = "you@gmail.com"
+smtp_account = "gmail"
+# smtp_host = "smtp.gmail.com"   # default: the account's host with imap. -> smtp.
+# smtp_port = 465

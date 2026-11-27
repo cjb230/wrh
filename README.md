@@ -10,7 +10,9 @@ What it is for:
 2. **Provenance.** When and where you first came across an idea or a person.
 3. **Self-research.** Keeping the data so you can analyse it later.
 
-Status: scaffold plus two sources (browser history, Claude and ChatGPT chats).
+Status: six sources. Browser history and Claude/ChatGPT chats are imported from
+files; email (Gmail and other IMAP), calendars, iMessage/SMS and Photos
+metadata sync themselves on a schedule. Every run is logged in the database.
 
 ## How it fits together
 
@@ -44,7 +46,7 @@ More: [docs/architecture.md](docs/architecture.md),
 
 ## Setup on the M1 server
 
-Needs [uv](https://docs.astral.sh/uv/). Turn on FileVault too (see
+Needs [uv](https://docs.astral.sh/uv/) and Python 3.15. Turn on FileVault too (see
 [docs/encryption.md](docs/encryption.md)).
 
 ```sh
@@ -82,7 +84,8 @@ uv run wrh serve           # http://127.0.0.1:8001
 
 To automate: `collectors/macos/collect-browser.sh` plus its launchd plist on
 each Mac (hourly snapshot and rsync over SSH), and
-`collectors/macos/com.wrh.ingest.plist` on the server. On Windows, schedule
+`collectors/macos/com.wrh.run.plist` on the server (see
+[docs/running-unattended.md](docs/running-unattended.md)). On Windows, schedule
 `uv run wrh collect browser --out ...` with Task Scheduler and copy the
 folder with `scp` or a synced folder.
 
@@ -121,6 +124,36 @@ export contains everything, so conversations are updated in place and only
 new messages are added. Conversations you delete on the service stay here.
 Delete the zip from Downloads after importing; the encrypted copy is the one to keep.
 
+## Email, calendars, Messages and Photos
+
+These four fetch their own data on the server, so they need no collector
+and no exports. Set them up once (app password, secret calendar address,
+Full Disk Access) as described in
+[docs/running-unattended.md](docs/running-unattended.md), then:
+
+```sh
+cp docs/config.example.toml ~/wrh-data/config.toml   # edit it
+uv run wrh secret set email/gmail
+uv run wrh secret set calendar/personal
+uv run wrh run              # run everything once, now
+uv run wrh status
+```
+
+| Source | From | Tables |
+| --- | --- | --- |
+| `email` | Gmail "All Mail" (and other accounts) over IMAP, read-only; or a Takeout `.mbox`. Newsletters and spam are dropped; attachments stored separately | `email_messages`, `email_participants`, `email_correspondents`, `email_attachment_files` |
+| `calendar` | Each calendar's secret iCal address; or an `.ics` file | `calendar_events`, `calendar_occurrences` |
+| `messages` | The server's `~/Library/Messages/chat.db` (iPhone messages via Messages in iCloud), names from Contacts | `messages_messages`, `messages_chats`, `messages_handles` |
+| `photos` | The server's Photos library (iPhone photos via iCloud Photos), metadata only, via osxphotos | `photos_photos`, `photos_people` |
+
+## Run log
+
+Every import, ingest and sync writes a row to `import_runs` (when, status,
+counts, error) and its warnings and errors to `import_problems` (with
+tracebacks). `wrh status` and `wrh problems` show them, and so does the
+"Import health" query in Datasette. A daily check flags sources that are
+failing or have not succeeded for a while, with an optional email alert.
+
 ## Commands
 
 | Command | What it does |
@@ -130,6 +163,13 @@ Delete the zip from Downloads after importing; the encrypted copy is the one to 
 | `wrh collect browser --out DIR` | Snapshot local browser history (no key needed) |
 | `wrh ingest` | Archive and import everything in `inbox/` |
 | `wrh import SOURCE FILE...` | Archive and import specific files |
+| `wrh sync SOURCE` | Fetch new data for email, calendar, messages or photos now |
+| `wrh run [--due] [JOB...]` | Run scheduled jobs (`--due`: only those due; used by launchd) |
+| `wrh status` | Last run and last success of every job; STALE if overdue |
+| `wrh check [--notify]` | List failing or stale sources (exit 1 if any) |
+| `wrh problems [--run N]` | Recent warnings and errors from the run log |
+| `wrh attachment SHA256` | Decrypt a stored email attachment |
+| `wrh secret set NAME` | Store an app password or secret URL in the Keychain |
 | `wrh reimport SOURCE` | Rebuild a source from the raw archive |
 | `wrh search QUERY` | Full-text search of the timeline |
 | `wrh serve` | Datasette on the encrypted database |
